@@ -1,6 +1,6 @@
-from kitti_dataset import KittiDataset
+from bdd_dataset import BDDDataset
 from utils import transform
-from torch import 
+
 
 def load_data():
-	train_loader = KittiDataset('./dataset', 'training', transform=transform)
+	train_loader = BDDDataset('./dataset', 'training', transform=transform)
