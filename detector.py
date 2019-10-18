@@ -18,8 +18,8 @@ from bdd_dataset import BDDDataset
 
 # SELECT NETWORK
 
-# network = "yolov3"
-network = "yolov3-tiny"
+network = "yolov3"
+# network = "yolov3-tiny"
 
 
 # network = "yolov2"
@@ -30,27 +30,20 @@ network = "yolov3-tiny"
 def arg_parse():
 	"""
     Parse arguements to the detect module
-
     """
-
 	parser = argparse.ArgumentParser(description='YOLO v3 Detection Module')
 
 	parser.add_argument("--root", dest='data_path', help=
-						"Root Directory containing complete dataset",
-	                    default="E:\ANU Study Stuff\Semester 3\Advanced Topics in Mechatronics\Project\BDD100K",
+	"Root Directory containing complete dataset",
+	                    default="/home/krishna/datasets/",
 	                    type=str)
 	parser.add_argument("--det", dest='det', help=
-						"Image / Directory to store detections to",
-	                    default="det", type=str)
-	parser.add_argument("--bs", dest="bs", help="Batch size", default=1)
+	"Image / Directory to store detections to", default="det", type=str)
+	parser.add_argument("--bs", dest="bs", help="Batch size", default=32)
 	parser.add_argument("--confidence", dest="confidence", help="Object Confidence to filter predictions", default=0.5)
 	parser.add_argument("--nms_thresh", dest="nms_thresh", help="NMS Threshhold", default=0.4)
-	parser.add_argument("--cfg", dest='cfgfile', help=
-						"Config file",
-	                    default="cfg/" + network + ".cfg", type=str)
-	parser.add_argument("--weights", dest='weightsfile', help=
-						"weightsfile",
-	                    default="weights/" + network + ".weights", type=str)
+	parser.add_argument("--cfg", dest='cfgfile', help="Config file", default="cfg/" + network + ".cfg", type=str)
+	parser.add_argument("--weights", dest='weightsfile', help="weightsfile", default="weights/" + network + ".weights", type=str)
 	parser.add_argument("--reso", dest='reso', help=
 						"Input resolution of the network. Increase to increase accuracy. Decrease to increase speed",
 	                    default="416", type=str)
@@ -85,14 +78,14 @@ model.eval()
 
 train_data = BDDDataset(args.data_path)
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False)
-num_classes = 10
+num_classes = len(BDDDataset.class_names)
 
 if not os.path.exists(args.det):
 	os.makedirs(args.det)
 
 write = 0
 start_det_loop = time.time()
-for i, batch in enumerate(train_data):
+for i, batch in enumerate(train_loader):
 	# load the image
 	start = time.time()
 	image, classes, bboxes = batch
@@ -106,7 +99,6 @@ for i, batch in enumerate(train_data):
 	end = time.time()
 
 	if type(prediction) == int:
-
 		# for im_num, image in enumerate(imlist[i * batch_size: min((i + 1) * batch_size, len(imlist))]):
 		# 	im_id = i * batch_size + im_num
 		# 	print("{0:20s} predicted in {1:6.3f} seconds".format(image.split("/")[-1], (end - start) / batch_size))
@@ -125,7 +117,8 @@ for i, batch in enumerate(train_data):
 	for im_num, image in enumerate(image):
 		im_id = i * batch_size + im_num
 		objs = [train_data.class_names[int(x[-1])] for x in output if int(x[0]) == im_id]
-		print("{0:20s} predicted in {1:6.3f} seconds".format(train_data.annotations[im_id]['name'], (end - start) / batch_size))
+		print("{0:20s} predicted in {1:6.3f} seconds".format(train_data.annotations[im_id]['name'],
+		                                                     (end - start) / batch_size))
 		print("{0:20s} {1:s}".format("Objects Detected:", " ".join(objs)))
 		print("----------------------------------------------------------")
 
@@ -133,7 +126,7 @@ for i, batch in enumerate(train_data):
 		torch.cuda.synchronize()
 
 try:
-    output
+	output
 except NameError:
-    print ("No detections were made")
-    exit()
+	print("No detections were made")
+	exit()
