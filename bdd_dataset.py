@@ -2,7 +2,6 @@ import json
 from torch.utils.data import Dataset
 import torch
 import os
-from augmentations import transform
 from PIL import Image
 from util import letterbox
 import numpy as np
@@ -58,7 +57,7 @@ class BDDDataset(Dataset):
         image = functional.to_tensor(image)
         bboxes = torch.IntTensor(bboxes)
         classes = torch.IntTensor(classes)
-        
+
         return image, classes, bboxes
 
 
@@ -66,11 +65,9 @@ if __name__ == "__main__":
     root = "E:\ANU Study Stuff\Semester 3\Advanced Topics in Mechatronics\Project\BDD100K"
     dataset = BDDDataset(root)
     image, classes, bboxes = dataset.__getitem__(105)
-    # image = cv2.imread(os.path.join(root, 'bdd100k/images/train/', annotation['name']), cv2.IMREAD_UNCHANGED)
     image = ToPILImage()(image)
 
     for class_, bbox in zip(classes.numpy(), bboxes.numpy()):
-        # class_ = BDDDataset.class_names.index(class_)
         c1 = tuple(bbox[0:2])
         c2 = tuple(bbox[2:4])
         image = cv2.rectangle(np.asarray(image), c1, c2, (0, 255, 0), 2)
@@ -78,7 +75,7 @@ if __name__ == "__main__":
         t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1, 1)[0]
         c2 = c1[0] + t_size[0] + 3, c1[1] + t_size[1] + 4
         cv2.rectangle(image, c1, c2, (0, 255, 0), -1)
-        cv2.putText(image, label, (c1[0], c1[1] + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 1, [0, 0, 0], 1);
+        cv2.putText(image, label, (c1[0], c1[1] + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 1, [0, 0, 0], 1)
 
     cv2.imshow("image", image)
     while True:
