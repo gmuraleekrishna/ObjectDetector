@@ -47,22 +47,22 @@ class BDDDataset(Dataset):
         return len(self.annotations)
 
     def __getitem__(self, index):
+        """
+        :param index:
+        :return: (image, labels): labels are in form [x1, y1, x2, y2, class_idx]
+        """
         annotation = self.annotations[index]
         image_file_name = annotation["name"]
         image = Image.open(os.path.join(self.root, self.image_folder, image_file_name))
-        bboxes = annotation['bboxes']
-        classes = list(map(lambda class_name: BDDDataset.class_names.index(class_name), annotation['classes']))
-        image, bboxes = letterbox(image, bboxes, self.img_size)
+        labels = annotation['labels']
+        image, bboxes = letterbox(image, labels[:4], self.img_size)
         # image = transform(image, bboxes, classes, config=self.config)
         image = functional.to_tensor(image)
-        bboxes = torch.IntTensor(bboxes)
-        classes = torch.IntTensor(classes)
-
-        return image, classes, bboxes
+        return image, bboxes
 
 
 if __name__ == "__main__":
-    root = "E:\ANU Study Stuff\Semester 3\Advanced Topics in Mechatronics\Project\BDD100K"
+    root = "/home/krishna/datasets/"
     dataset = BDDDataset(root)
     image, classes, bboxes = dataset.__getitem__(105)
     image = ToPILImage()(image)
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         c1 = tuple(bbox[0:2])
         c2 = tuple(bbox[2:4])
         image = cv2.rectangle(np.asarray(image), c1, c2, (0, 255, 0), 2)
-        label = "{0}".format(dataset.class_names[class_])
+        label = "{0}".format(dataset.class_names[label[-1]])
         t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1, 1)[0]
         c2 = c1[0] + t_size[0] + 3, c1[1] + t_size[1] + 4
         cv2.rectangle(image, c1, c2, (0, 255, 0), -1)
