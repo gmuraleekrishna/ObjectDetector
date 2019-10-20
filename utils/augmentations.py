@@ -80,14 +80,15 @@ class SubtractMeans(object):
 
 
 class ToAbsoluteCoords(object):
-    def __call__(self, image, boxes=None, labels=None):
-        height, width, channels = image.shape
+    def __call__(self, image, boxes=None):
+        boxes = np.array(boxes).squeeze()
+        height, width = image.size
         boxes[:, 0] *= width
         boxes[:, 2] *= width
         boxes[:, 1] *= height
         boxes[:, 3] *= height
 
-        return image, boxes, labels
+        return image, boxes
 
 
 class ToPercentCoords(object):

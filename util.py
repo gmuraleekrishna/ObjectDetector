@@ -1,11 +1,13 @@
 from __future__ import division
 
 import torch
+from torchvision.transforms import ToPILImage
+from utils.augmentations import ToAbsoluteCoords
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 
 def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA=True):
@@ -192,7 +194,7 @@ class LetterBox(object):
 
 		h_scale = new_h / img_h
 		w_scale = new_w / img_w
-		bboxes = np.array(labels, dtype=np.long)
+		bboxes = np.array(labels, dtype=np.float32)
 		h_shift = (h - new_h) // 2
 		w_shift = (w - new_w) // 2
 
@@ -205,8 +207,52 @@ class LetterBox(object):
 		canvas = np.full((h, w, 3), 128, dtype=np.uint8)
 		canvas[h_shift: h_shift + new_h, w_shift:w_shift + new_w, :] = resized_image
 		canvas = Image.fromarray(canvas)
-		return canvas, labels
+		return canvas, bboxes
 
+
+def plot_boxes(image, targets):
+	class_names = (
+		"bike",
+		"bus",
+		"car",
+		"motor",
+		"person",
+		"rider",
+		"traffic light",
+		"traffic sign",
+		"train",
+		"truck"
+	)
+
+	if torch.is_tensor(targets):
+		targets = torch.Tensor.cpu(targets).detach().numpy()
+	else:
+		targets = np.array(targets)
+	targets = targets.squeeze()
+	image = ToPILImage()(image)
+	image, targets = ToAbsoluteCoords()(image, boxes=targets)
+	targets = targets.astype('int32')
+	draw = ImageDraw.Draw(image)
+
+	colors = [(0, 0, 0), (0, 0, 255), (255, 0, 0), (0, 100, 100), (100, 0, 100),
+	          (100, 100, 0), (0, 0, 100), (0, 255, 0), (255, 165, 0), (255, 255, 0)]
+	# font = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 40)
+	count = 0
+	print('Labels:', targets)
+	for result in targets:
+		result = result.astype('int32')
+		color = colors[result[-1]]
+		fcolor = tuple(255 - i for i in color)
+		draw.rectangle(list(result[0:4]), outline=color)
+		text = "{0}".format(class_names[result[-1]])
+		text_size = draw.textsize(text, direction='ltr')
+		c1 = tuple(result[0:2])
+		c2 = (c1[0] + text_size[0], c1[1] + text_size[1])
+		draw.rectangle([c1, c2], color, color)
+		draw.text(c1, text, fcolor)
+		count += 1
+	print('Labels found:', count)
+	image.show()
 
 def detection_collate(batch):
     """Custom collate fn for dealing with batches of images that have a different

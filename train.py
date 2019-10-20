@@ -39,6 +39,9 @@ args = parser.parse_args()
 
 if torch.cuda.is_available() and args.use_cuda:
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
+	print('Using CUDA')
+else:
+	print('Not using CUDA')
 
 if not os.path.exists(args.save_folder):
 	os.mkdir(args.save_folder)

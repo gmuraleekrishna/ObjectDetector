@@ -87,8 +87,8 @@ class BDDDataset(Dataset):
         image_file_name = annotation["name"]
         image = Image.open(os.path.join(self.root, self.image_folder, image_file_name))
         labels = annotation['labels']
-        image, labels = AnnotationTransform(shape=self.img_size)(image, labels)
         image, labels = LetterBox(shape=self.img_size)(image, labels)
+        image, labels = AnnotationTransform(shape=self.img_size)(image, labels)
         image = transforms.ToTensor()(image)
         image = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))(image)
         # image = transform(image, bboxes, classes, config=self.config)
