@@ -4,7 +4,7 @@ import torch
 import os
 from augmentations import transform
 from PIL import Image
-from util import letterbox, print_boxes_original
+from utils import letterbox #, print_boxes_original
 import numpy as np
 from torchvision.transforms import functional, ToPILImage
 import cv2
@@ -56,13 +56,31 @@ class BDDDataset(Dataset):
         image_file_name = annotation["name"]
         image = Image.open(os.path.join(self.root, self.image_folder, image_file_name))
         self.size = image.size
+        targets = np.zeros(5*50)
         labels = np.array(annotation['labels'])
-        image, labels[:, 1:5] = letterbox(image, labels[:, 1:5], self.img_size)
+        image, labels[:, 1:5] = letterbox(image, labels[:,1:5], self.img_size)
         # image = transform(image, bboxes, classes, config=self.config)
-        image = functional.to_tensor(image)
-        labels = torch.IntTensor(labels)
 
-        return image, labels
+        # Changing format to (x, y, w, h) from (x0, y0, x1, y1)
+        # cx = (labels[:, 1] + labels[:, 3])/2
+        # cy = (labels[:, 2] + labels[:, 4])/2
+        # w = labels[:, 3] - labels[:, 1]
+        # h = labels[:, 4] - labels[:, 2]
+        # labels[:, 1] = cx
+        # labels[:, 2] = cy
+        # labels[:, 3] = w
+        # labels[:, 4] = h
+
+        labels = labels.reshape(-1)
+        if labels.shape[0] > 5*50:
+            targets = labels[0:50*5]
+        elif labels.shape[0] > 0:
+            targets[0:labels.shape[0]] = labels
+
+        image = functional.to_tensor(image)
+        targets = torch.from_numpy(targets.astype('float32'))
+
+        return image, targets
 
 
 if __name__ == "__main__":
@@ -70,7 +88,7 @@ if __name__ == "__main__":
     root = "E:/ANU Study Stuff/Semester 3/Advanced Topics in Mechatronics/Project/BDD100K/"
     dataset = BDDDataset(root)
     _ , labels = dataset[105]
-    print_boxes_original(labels, dataset, 105)
+    # print_boxes_original(labels, dataset, 105)
 #    # image = cv2.imread(os.path.join(root, 'bdd100k/images/train/', annotation['name']), cv2.IMREAD_UNCHANGED)
 #    image = ToPILImage()(image)
 #
