@@ -4,12 +4,12 @@ import os
 from bdd_dataset import BDDDataset
 
 new_annotation = []
-dataset_type = ['train', 'val'][1]
-dataset_folder = '/home/krishna/datasets/'
+dataset_type = ['train', 'val'][0]
+dataset_folder = '../bdd100k_lab'
 
 if __name__ == "__main__":
-	output_dir = os.path.join(dataset_folder, 'bdd100k/converted_labels/')
-	input_dir = os.path.join(dataset_folder, 'bdd100k/converted_labels/')
+	input_dir = os.path.join(dataset_folder, 'labels/')
+	output_dir = os.path.join(dataset_folder, 'converted_labels/')
 	if not os.path.exists(output_dir):
 		os.mkdir(output_dir)
 	with open(os.path.join(input_dir, f'bdd100k_labels_images_{dataset_type}.json'), 'r') as json_fl:

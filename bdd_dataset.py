@@ -3,14 +3,46 @@ from torch.utils.data import Dataset
 import torch
 import os
 from PIL import Image
-from util import letterbox
+from util import LetterBox
 import numpy as np
-from torchvision.transforms import functional, ToPILImage
+from torchvision.transforms import functional, ToPILImage, transforms
 import cv2
+
+class AnnotationTransform(object):
+    """Transforms a VOC annotation into a Tensor of bbox coords and label index
+    Initilized with a dictionary lookup of classnames to indexes
+
+    Arguments:
+        class_to_ind (dict, optional): dictionary lookup of classnames -> indexes
+            (default: alphabetic indexing of VOC's 20 classes)
+        keep_difficult (bool, optional): keep difficult instances or not
+            (default: False)
+        height (int): height
+        width (int): width
+    """
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, image, target):
+        """
+        Arguments:
+            target (annotation) : the target annotation to be made usable
+                will be an ET.Element
+        Returns:
+            a list containing lists of bounding boxes  [bbox coords, class name]
+        """
+        res = []
+        for box in target:
+            box[0] = box[0] / self.shape[0]
+            box[1] = box[1] / self.shape[1]
+            box[2] = box[2] / self.shape[0]
+            box[3] = box[3] / self.shape[1]
+            res.append(box)
+        return image, res  # [[xmin, ymin, xmax, ymax, label_ind], ... ]
 
 
 class BDDDataset(Dataset):
-    class_names = [
+    class_names = (
         "bike",
         "bus",
         "car",
@@ -21,15 +53,15 @@ class BDDDataset(Dataset):
         "traffic sign",
         "train",
         "truck"
-    ]
+    )
 
-    def __init__(self, root, img_size=(416, 416), train=True, config=None):
+    def __init__(self, root, img_size=(416, 416), train=True, config=None, ):
         if config is None:
             self.config = {'expand': False, 'flip': False, 'normalise': False, 'resize': False, 'distort': False,
                            'crop': False}
         else:
             self.config = config
-
+        self.name = 'BDD100k'
         self.root = root
         self.img_size = img_size
         self.config = config
@@ -55,10 +87,14 @@ class BDDDataset(Dataset):
         image_file_name = annotation["name"]
         image = Image.open(os.path.join(self.root, self.image_folder, image_file_name))
         labels = annotation['labels']
-        image, bboxes = letterbox(image, labels[:4], self.img_size)
+        image, labels = AnnotationTransform(shape=self.img_size)(image, labels)
+        image, labels = LetterBox(shape=self.img_size)(image, labels)
+        image = transforms.ToTensor()(image)
+        image = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))(image)
         # image = transform(image, bboxes, classes, config=self.config)
-        image = functional.to_tensor(image)
-        return image, bboxes
+        return image, labels
+
+
 
 
 if __name__ == "__main__":

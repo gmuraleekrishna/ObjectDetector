@@ -3,4 +3,4 @@ from utils import transform
 
 
 def load_data():
-	train_loader = BDDDataset('./dataset', 'training', transform=transform)
+	train_loader = BDDDataset('./dataset', train=True)

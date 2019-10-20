@@ -179,35 +179,49 @@ def write_results(prediction, confidence, num_classes, nms_conf=0.4):
 		return 0
 
 
-def letterbox(img, bboxes, inp_dim):
-	"""resize image and bounding boxes with unchanged aspect ratio using padding"""
+class LetterBox(object):
+	def __init__(self, shape=(416, 416)):
+		self.shape = shape
 
-	img_w, img_h = img.size[0], img.size[1]
-	w, h = inp_dim
-	new_w = int(img_w * min(w / img_w, h / img_h))
-	new_h = int(img_h * min(w / img_w, h / img_h))
-	resized_image = img.resize((new_w, new_h), resample=Image.BICUBIC)
+	def __call__(self, image, labels):
+		img_w, img_h = image.size[0], image.size[1]
+		w, h = self.shape
+		new_w = int(img_w * min(w / img_w, h / img_h))
+		new_h = int(img_h * min(w / img_w, h / img_h))
+		resized_image = image.resize((new_w, new_h), resample=Image.BICUBIC)
 
-	h_scale = new_h / img_h
-	w_scale = new_w / img_w
-	bboxes = np.array(bboxes, dtype=np.long)
+		h_scale = new_h / img_h
+		w_scale = new_w / img_w
+		bboxes = np.array(labels, dtype=np.long)
+		h_shift = (h - new_h) // 2
+		w_shift = (w - new_w) // 2
 
-	# Scaling Bounding box coordinates
-	bboxes[:, 0] = bboxes[:, 0] * w_scale
-	bboxes[:, 1] = bboxes[:, 1] * h_scale
-	bboxes[:, 2] = bboxes[:, 2] * w_scale
-	bboxes[:, 3] = bboxes[:, 3] * h_scale
+		# Scaling Bounding box coordinates and shifting in accordance with gray padding
+		bboxes[:, 0] = bboxes[:, 0] * w_scale  + w_shift
+		bboxes[:, 1] = bboxes[:, 1] * h_scale + h_shift
+		bboxes[:, 2] = bboxes[:, 2] * w_scale + w_shift
+		bboxes[:, 3] = bboxes[:, 3] * h_scale + h_shift
 
-	h_shift = (h - new_h) // 2
-	w_shift = (w - new_w) // 2
-	canvas = np.full((inp_dim[1], inp_dim[0], 3), 128, dtype=np.uint8)
-	canvas[h_shift: h_shift + new_h, w_shift:w_shift + new_w, :] = resized_image
-	canvas = Image.fromarray(canvas)
+		canvas = np.full((h, w, 3), 128, dtype=np.uint8)
+		canvas[h_shift: h_shift + new_h, w_shift:w_shift + new_w, :] = resized_image
+		canvas = Image.fromarray(canvas)
+		return canvas, labels
 
-	# Shifting Bounding Box coordinates in accordance with gray padding
-	bboxes[:, 0] = bboxes[:, 0] + w_shift
-	bboxes[:, 1] = bboxes[:, 1] + h_shift
-	bboxes[:, 2] = bboxes[:, 2] + w_shift
-	bboxes[:, 3] = bboxes[:, 3] + h_shift
 
-	return canvas, bboxes
+def detection_collate(batch):
+    """Custom collate fn for dealing with batches of images that have a different
+    number of associated object annotations (bounding boxes).
+    Arguments:
+        batch: (tuple) A tuple of tensor images and lists of annotations
+    Return:
+        A tuple containing:
+            1) (tensor) batch of images stacked on their 0 dim
+            2) (list of tensors) annotations for a given image are stacked on
+                                 0 dim
+    """
+    targets = []
+    imgs = []
+    for sample in batch:
+        imgs.append(sample[0])
+        targets.append(torch.FloatTensor(sample[1]))
+    return torch.stack(imgs, 0), targets

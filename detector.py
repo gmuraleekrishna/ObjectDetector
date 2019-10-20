@@ -70,8 +70,7 @@ assert inp_dim % 32 == 0
 assert inp_dim > 32
 
 # If there's a GPU availible, put the model on GPU
-if CUDA:
-	model.cuda()
+model.to('cuda')
 
 # Set the model in evaluation mode
 model.eval()
@@ -89,10 +88,9 @@ for i, batch in enumerate(train_loader):
 	# load the image
 	start = time.time()
 	image, classes, bboxes = batch
-	if CUDA:
-		image = image.cuda()
+	image = image.cuda()
 
-	prediction = model(Variable(image, volatile=True), CUDA)
+	prediction = model(image, CUDA)
 
 	prediction = write_results(prediction, confidence, num_classes, nms_conf=nms_thesh)
 
