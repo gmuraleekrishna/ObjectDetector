@@ -62,14 +62,14 @@ class BDDDataset(Dataset):
         # image = transform(image, bboxes, classes, config=self.config)
 
         # Changing format to (x, y, w, h) from (x0, y0, x1, y1)
-        # cx = (labels[:, 1] + labels[:, 3])/2
-        # cy = (labels[:, 2] + labels[:, 4])/2
-        # w = labels[:, 3] - labels[:, 1]
-        # h = labels[:, 4] - labels[:, 2]
-        # labels[:, 1] = cx
-        # labels[:, 2] = cy
-        # labels[:, 3] = w
-        # labels[:, 4] = h
+        cx = (labels[:, 1] + labels[:, 3])/2
+        cy = (labels[:, 2] + labels[:, 4])/2
+        w = labels[:, 3] - labels[:, 1]
+        h = labels[:, 4] - labels[:, 2]
+        labels[:, 1] = cx
+        labels[:, 2] = cy
+        labels[:, 3] = w
+        labels[:, 4] = h
 
         labels = labels.reshape(-1)
         if labels.shape[0] > 5*50:

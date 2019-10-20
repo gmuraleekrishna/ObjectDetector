@@ -51,7 +51,7 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, nH, nW,
     nCorrect = 0
     for b in range(nB):
         for t in range(50):
-            if target[b][t*5+1] == 0:
+            if target[b][t*5+3] == 0:
                 break
             nGT = nGT + 1
             best_iou = 0.0

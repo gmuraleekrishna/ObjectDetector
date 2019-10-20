@@ -81,7 +81,7 @@ class Darknet(nn.Module):
         self.blocks = parse_cfg(cfgfile)
         self.models = self.create_network(self.blocks) # merge conv, bn,leaky
         self.loss = self.models[len(self.models)-1]
-
+        # self.loss = None
         self.width = int(self.blocks[0]['width'])
         self.height = int(self.blocks[0]['height'])
 
@@ -94,7 +94,7 @@ class Darknet(nn.Module):
         self.header = torch.IntTensor([0,0,0,0])
         self.seen = 0
 
-    def forward(self, x):
+    def forward(self, x, target):
         ind = -2
         self.loss = None
         outputs = dict()
@@ -141,7 +141,11 @@ class Darknet(nn.Module):
                 outputs[ind] = None
             elif block['type'] == 'yolo':
                 if self.training:
-                    pass
+                    # pass
+                    if self.loss:
+                        self.loss = self.loss + self.models[ind](x, target=target)
+                    else:
+                        self.loss = self.models[ind](x, target=target)
                 else:
                     boxes = self.models[ind](x)
                     out_boxes.append(boxes)
@@ -150,7 +154,7 @@ class Darknet(nn.Module):
             else:
                 print('unknown type %s' % (block['type']))
         if self.training:
-            return loss
+            return self.loss
         else:
             return out_boxes
 
@@ -176,7 +180,7 @@ class Darknet(nn.Module):
                 kernel_size = int(block['size'])
                 stride = int(block['stride'])
                 is_pad = int(block['pad'])
-                pad = (kernel_size-1)/2 if is_pad else 0
+                pad = (kernel_size-1)//2 if is_pad else 0
                 activation = block['activation']
                 model = nn.Sequential()
                 if batch_normalize:
