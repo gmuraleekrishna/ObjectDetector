@@ -6,35 +6,28 @@ import os
 import sys
 import time
 import torch
-from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
-import torch.backends.cudnn as cudnn
 import torch.nn.init as init
 import torch.utils.data as data
-import numpy as np
 import argparse
-from torchvision import transforms
-from data.config import MEANS
-from data.voc0712 import VOCDetection
 from bdd_dataset import BDDDataset
 
 dataset_root = '/home/krishna/datasets/'
 
 os.environ['OMP_NUM_THREADS'] = '1'
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 parser = argparse.ArgumentParser(
 	description='Single Shot MultiBox Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth', help='Pretrained base model')
-parser.add_argument('--batch_size', default=32, type=int)
+parser.add_argument('--batch_size', default=40, type=int)
+parser.add_argument('--epochs', default=100, type=int)
 parser.add_argument('--use_cuda', default=False, action="store_true")
-parser.add_argument('--resume', default=None, type=str,
-                    help='Checkpoint state_dict file to resume training from')
+parser.add_argument('--resume', default=None, type=str, help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--lr', default=1e-3, type=float)
-parser.add_argument('--save_folder', default='weights/',
-                    help='Directory for saving checkpoint models')
+parser.add_argument('--save_folder', default='weights/', help='Directory for saving checkpoint models')
 args = parser.parse_args()
 
 if torch.cuda.is_available() and args.use_cuda:
@@ -98,7 +91,7 @@ def train():
 		ssd_net.conf.apply(weights_init)
 
 	optimizer = optim.Adam(net.parameters(), lr=args.lr, betas=(0.99, 0.999), weight_decay=5e-4)
-	criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, device)
+	criterion = MultiBoxLoss(cfg['num_classes'], 0.5, 3, device)
 
 	net.train()
 	loc_loss = 0
@@ -112,15 +105,11 @@ def train():
 
 	step_index = 0
 
-	data_loader = data.DataLoader(dataset, args.batch_size, num_workers=0, shuffle=True, collate_fn=detection_collate,
+	data_loader = data.DataLoader(dataset, args.batch_size, num_workers=4, shuffle=True, collate_fn=detection_collate,
 	                              pin_memory=True)
 	# create batch iterator
-	for epoch in range(num_epochs):
+	for epoch in range(args.epochs):
 		for iteration, (images, targets) in enumerate(data_loader):
-			if epoch in cfg['lr_steps']:
-				step_index += 1
-				adjust_learning_rate(optimizer, args.gamma, step_index)
-
 			# load train data
 			images = images.to(device)
 			targets = [torch.FloatTensor(ann).to(device) for ann in targets]
@@ -142,19 +131,12 @@ def train():
 				print('timer: %.4f sec.' % (t1 - t0))
 				print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data.item()), end=' ')
 
+			# if iteration % 1000 == 0:
+			# 	for param_group in optimizer.param_groups:
+			# 		param_group['lr'] = param_group['lr'] * 0.1
 		if epoch != 0 and epoch % 5 == 0:
 			print('Saving state, epoch:', epoch)
 			torch.save(ssd_net.state_dict(), 'weights/ssd300_' + dataset.name + repr(epoch) + '.pth')
-
-
-def adjust_learning_rate(optimizer, gamma, step):
-	"""Sets the learning rate to the initial LR decayed by 10 at every specified step
-	# Adapted from PyTorch Imagenet example:
-	# https://github.com/pytorch/examples/blob/master/imagenet/main.py
-	"""
-	lr = args.lr * (gamma ** (step))
-	for param_group in optimizer.param_groups:
-		param_group['lr'] = lr
 
 
 def xavier(param):

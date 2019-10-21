@@ -199,7 +199,7 @@ class LetterBox(object):
 		w_shift = (w - new_w) // 2
 
 		# Scaling Bounding box coordinates and shifting in accordance with gray padding
-		bboxes[:, 0] = bboxes[:, 0] * w_scale  + w_shift
+		bboxes[:, 0] = bboxes[:, 0] * w_scale + w_shift
 		bboxes[:, 1] = bboxes[:, 1] * h_scale + h_shift
 		bboxes[:, 2] = bboxes[:, 2] * w_scale + w_shift
 		bboxes[:, 3] = bboxes[:, 3] * h_scale + h_shift
@@ -208,7 +208,6 @@ class LetterBox(object):
 		canvas[h_shift: h_shift + new_h, w_shift:w_shift + new_w, :] = resized_image
 		canvas = Image.fromarray(canvas)
 		return canvas, bboxes
-
 
 def plot_boxes(image, targets):
 	class_names = (

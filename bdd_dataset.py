@@ -1,13 +1,16 @@
 import json
+import random
+
 from torch.utils.data import Dataset
 import torch
 import os
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance
 from util import LetterBox, plot_boxes
 import numpy as np
 from torchvision.transforms import functional, ToPILImage, transforms
 import cv2
 from utils.augmentations import ToAbsoluteCoords
+
 
 class AnnotationTransform(object):
     """Transforms a VOC annotation into a Tensor of bbox coords and label index
@@ -40,6 +43,33 @@ class AnnotationTransform(object):
             box[3] = box[3] / self.shape[1]
             res.append(box)
         return image, res  # [[xmin, ymin, xmax, ymax, label_ind], ... ]
+
+
+class RandomMirror(object):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, image, labels):
+        _, width = self.shape
+        if random.randint(0, 1):
+            image = image.transpose(method=Image.FLIP_LEFT_RIGHT)
+            labels[:, 0::3] = width - labels[:, 2::-2]
+        return image, labels
+
+
+class RandomContrast(object):
+    def __init__(self, lower=0.1, upper=1.0):
+        self.lower = lower
+        self.upper = upper
+        assert self.upper >= self.lower, "contrast upper must be >= lower."
+        assert self.lower >= 0, "contrast lower must be non-negative."
+
+    # expects float image
+    def __call__(self, image, labels):
+        if random.randint(0, 1):
+            alpha = random.uniform(self.lower, self.upper)
+            ImageEnhance.Contrast(image).enhance(alpha)
+        return image, labels
 
 
 class BDDDataset(Dataset):
@@ -88,14 +118,14 @@ class BDDDataset(Dataset):
         image_file_name = annotation["name"]
         image = Image.open(os.path.join(self.root, self.image_folder, image_file_name))
         labels = annotation['labels']
+        image, labels = RandomContrast()(image, labels)
         image, labels = LetterBox(shape=self.img_size)(image, labels)
+        # image, labels = RandomMirror(shape=self.img_size)(image, labels)
         image, labels = AnnotationTransform(shape=self.img_size)(image, labels)
         image = transforms.ToTensor()(image)
         image = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))(image)
         # image = transform(image, bboxes, classes, config=self.config)
         return image, labels
-
-
 
 
 if __name__ == "__main__":
