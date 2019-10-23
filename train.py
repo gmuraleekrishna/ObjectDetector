@@ -1,3 +1,5 @@
+import numpy as np
+
 from data import voc, bdd
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
@@ -108,6 +110,7 @@ def train():
 	data_loader = data.DataLoader(dataset, args.batch_size, num_workers=4, shuffle=True, collate_fn=detection_collate,
 	                              pin_memory=True)
 	# create batch iterator
+	best_loss = np.Inf
 	for epoch in range(args.epochs):
 		for iteration, (images, targets) in enumerate(data_loader):
 			# load train data
@@ -131,6 +134,10 @@ def train():
 				print('timer: %.4f sec.' % (t1 - t0))
 				print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data.item()), end=' ')
 
+			if iteration != 0 and iteration % 50 == 0 and loss.data.item() < best_loss:
+				print('Saving state, iteration:', iteration)
+				torch.save(ssd_net.state_dict(), 'weights/best_' + dataset.name + '.pth')
+				best_loss = loss.data.item()
 			# if iteration % 1000 == 0:
 			# 	for param_group in optimizer.param_groups:
 			# 		param_group['lr'] = param_group['lr'] * 0.1

@@ -104,11 +104,7 @@ class MultiBoxLoss(nn.Module):
         targets_weighted = conf_t[(pos+neg).gt(0)]
         # loss_c = F.cross_entropy(conf_p, targets_weighted, reduction='mean')
         loss_c = self.focal_loss(conf_p, targets_weighted)
-        if loss_c>20.0:
-            print('Infinity value reached')
-            print('Loss:', loss_c)
-            print('INPUTS:', conf_p, targets_weighted)
-            pr = True
+
         # if pr:
         #     print(str(loss_c))
 

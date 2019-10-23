@@ -1,13 +1,13 @@
 from __future__ import division
 
 import torch
-from torchvision.transforms import ToPILImage
+from torchvision.transforms import ToPILImage, transforms
 from utils.augmentations import ToAbsoluteCoords
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, JpegImagePlugin
 
 
 def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA=True):

@@ -6,10 +6,13 @@ from torch.autograd import Variable
 
 
 class FocalLoss(nn.Module):
-	def __init__(self, gamma=0, alpha=None, size_average=True):
+	def __init__(self, num_classes, gamma=0, alpha=None, size_average=True):
 		super(FocalLoss, self).__init__()
-		self.gamma = gamma
+		# if alpha is None:
+		# 	self.alpha = Variable(torch.ones(num_classes, 1))
+		# else:
 		self.alpha = alpha
+		self.gamma = gamma
 		if isinstance(alpha, (float, int)): self.alpha = torch.Tensor([alpha, 1 - alpha])
 		if isinstance(alpha, list): self.alpha = torch.Tensor(alpha)
 		self.size_average = size_average
@@ -21,7 +24,7 @@ class FocalLoss(nn.Module):
 			x = x.contiguous().view(-1, x.size(2))  # N,H*W,C => N*H*W,C
 		target = target.view(-1, 1)
 
-		logpt = F.log_softmax(x)
+		logpt = F.log_softmax(x, dim=1)
 		logpt = logpt.gather(1, target)
 		logpt = logpt.view(-1)
 		pt = Variable(logpt.data.exp())

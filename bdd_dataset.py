@@ -86,7 +86,7 @@ class BDDDataset(Dataset):
         "truck"
     )
 
-    def __init__(self, root, img_size=(416, 416), train=True, config=None, ):
+    def __init__(self, root, img_size=(416, 416), train=True, config=None):
         if config is None:
             self.config = {'expand': False, 'flip': False, 'normalise': False, 'resize': False, 'distort': False,
                            'crop': False}
@@ -96,6 +96,7 @@ class BDDDataset(Dataset):
         self.root = root
         self.img_size = img_size
         self.config = config
+        self.is_train = train
         if train:
             self.image_folder = 'bdd100k/images/train'
             self.annotations_file = 'bdd100k/converted_labels/bdd100k_labels_images_train.json'
@@ -114,18 +115,42 @@ class BDDDataset(Dataset):
         :param index:
         :return: (image, labels): labels are in form [x1, y1, x2, y2, class_idx]
         """
+        image, labels, h, w = self.pull_item(index)
+        if self.is_train:
+            image, labels = RandomMirror(shape=self.img_size)(image, labels)
+            image, labels = RandomContrast()(image, labels)
+        image, labels = LetterBox(shape=self.img_size)(image, labels)
+        if self.is_train:
+            image, labels = AnnotationTransform(shape=self.img_size)(image, labels)
+            image = transforms.ToTensor()(image)
+            image = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))(image)
+        # image = transform(image, bboxes, classes, config=self.config)
+        return image, labels, index
+
+    def pull_item(self, index):
         annotation = self.annotations[index]
         image_file_name = annotation["name"]
         image = Image.open(os.path.join(self.root, self.image_folder, image_file_name))
         labels = annotation['labels']
-        image, labels = RandomContrast()(image, labels)
-        image, labels = LetterBox(shape=self.img_size)(image, labels)
-        # image, labels = RandomMirror(shape=self.img_size)(image, labels)
-        image, labels = AnnotationTransform(shape=self.img_size)(image, labels)
-        image = transforms.ToTensor()(image)
-        image = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))(image)
-        # image = transform(image, bboxes, classes, config=self.config)
-        return image, labels
+
+        if self.is_train:
+            return image, labels, image.size[0], image.size[1]
+        else:
+            image, labels = LetterBox(shape=self.img_size)(image, labels)
+            return image, labels, image.size[0], image.size[1]
+
+    def pull_image(self, index):
+        annotation = self.annotations[index]
+        image_file_name = annotation["name"]
+        image = Image.open(os.path.join(self.root, self.image_folder, image_file_name))
+        image, _ = LetterBox(shape=self.img_size)(image, [(0, 0, 0, 0, 0)])
+        return transforms.ToTensor()(image)
+
+    def pull_anno(self, index):
+        annotation = self.annotations[index]
+        labels = annotation['labels']
+        image_file_name = annotation["name"]
+        return image_file_name, labels
 
 
 if __name__ == "__main__":

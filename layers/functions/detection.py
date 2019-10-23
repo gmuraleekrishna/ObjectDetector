@@ -1,5 +1,6 @@
 import torch
 from torch.autograd import Function
+from torch import nn as nn
 from ..box_utils import decode, nms
 from data import bdd as cfg
 
@@ -12,7 +13,7 @@ class Detect(Function):
     """
     def __init__(self, bkg_label, top_k, conf_thresh, nms_thresh):
         self.num_classes = cfg['num_classes']
-        self.background_label = bkg_label
+        self.background_label = 0
         self.top_k = top_k
         # Parameters used in nms.
         self.nms_thresh = nms_thresh
